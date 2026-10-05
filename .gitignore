@@ -1,0 +1,7 @@
+# Per-device secrets (broker password, factory token, setup password)
+secrets.py
+# Written by the device itself
+wifi.json
+valve.json
+*.tmp
+__pycache__/
