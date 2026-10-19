@@ -38,6 +38,29 @@ def feed():
         watchdog.feed()
 
 
+_pressed_since = None
+
+
+def setup_requested():
+    """True when BOOT has been held SETUP_HOLD_SECONDS. Measured by time (not by loops), so it also
+    works while connect() is waiting for a WiFi that is not around. The LED stays on while held."""
+    global _pressed_since
+    if button.value() != 0:
+        _pressed_since = None
+        return False
+    if _pressed_since is None:
+        _pressed_since = time.ticks_ms()
+        print("Setup button: hold it", config.SETUP_HOLD_SECONDS, "s to forget the WiFi")
+    led.on()
+    return time.ticks_diff(time.ticks_ms(), _pressed_since) >= config.SETUP_HOLD_SECONDS * 1000
+
+
+def forget_wifi_and_restart():
+    print("Setup button: forgetting the WiFi")
+    wifi.forget()
+    machine.reset()
+
+
 def credentials():
     data = wifi.saved()
     if data is None and getattr(secrets, "WIFI_SSID", ""):
@@ -85,25 +108,24 @@ def run():
     started = time.ticks_ms()
     interval_start = time.ticks_ms()
     interval_pulses = 0
-    held = 0
 
     while True:
         loop_start = time.ticks_ms()
         feed()
 
         # 0) BOOT held 5 s → forget the WiFi and go to setup mode
-        held = held + 1 if button.value() == 0 else 0
-        if held >= config.SETUP_HOLD_SECONDS:
-            print("Setup button: forgetting the WiFi")
-            wifi.forget()
-            machine.reset()
+        if setup_requested():
+            forget_wifi_and_restart()
 
         # 1) WiFi (if it fell, reconnect; the sensor keeps counting meanwhile)
         if not wifi.is_connected():
             led.off()
             link.close()  # the old socket is dead
-            if wifi.connect(creds["ssid"], creds.get("password", ""), config.WIFI_TIMEOUT_SECONDS, feed):
+            if wifi.connect(creds["ssid"], creds.get("password", ""), config.WIFI_TIMEOUT_SECONDS, feed,
+                            setup_requested):
                 wifi.mark_verified(creds)
+            elif setup_requested():
+                forget_wifi_and_restart()
             elif not creds.get("verified") and \
                     time.ticks_diff(time.ticks_ms(), started) > config.FIRST_CONNECT_SECONDS * 1000:
                 # A WiFi that NEVER worked (wrong password?) → back to setup mode with the reason

@@ -1,6 +1,6 @@
 # Settings that are the same for every device (they CAN go into git).
 
-FIRMWARE_VERSION = "2.0.0"
+FIRMWARE_VERSION = "2.0.1"
 
 # --- Times (seconds) -----------------------------------------------------------
 HEARTBEAT_SECONDS = 30        # HU-013: "Desconectado" after 10 min without one

@@ -25,8 +25,9 @@ def forget():
     storage.remove(FILE)
 
 
-def connect(ssid, password, timeout_seconds, feed=None):
-    """Connects to the WiFi. Returns True/False, never blocks longer than timeout_seconds."""
+def connect(ssid, password, timeout_seconds, feed=None, abort=None):
+    """Connects to the WiFi. Returns True/False, never blocks longer than timeout_seconds.
+    abort(): checked every 250 ms; if it returns True the wait stops right away (BOOT held)."""
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
     if wlan.isconnected():
@@ -49,6 +50,8 @@ def connect(ssid, password, timeout_seconds, feed=None):
             return False
         if feed:
             feed()
+        if abort and abort():
+            return False
         time.sleep_ms(250)
 
     print("WiFi: connected, IP", wlan.ifconfig()[0])
